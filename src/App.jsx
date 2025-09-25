@@ -264,6 +264,103 @@ function App() {
     return obrasPredefinidas.find(obra => obra.id === formData.obraSelecionada)
   }
 
+  // Funcionalidades de rascunho
+  const salvarRascunho = () => {
+    try {
+      const rascunho = {
+        ...formData,
+        dataRascunho: new Date().toISOString(),
+        nomeRascunho: `Rascunho_${formData.numeroRDO || 'Sem_RDO'}_${new Date().toLocaleDateString('pt-BR').replace(/\//g, '-')}`
+      }
+      
+      // Converter arquivos para base64 para armazenamento
+      const rascunhoParaSalvar = { ...rascunho }
+      
+      // Salvar no localStorage
+      const rascunhosExistentes = JSON.parse(localStorage.getItem('diarioObraRascunhos') || '[]')
+      rascunhosExistentes.push(rascunhoParaSalvar)
+      
+      // Manter apenas os últimos 10 rascunhos
+      if (rascunhosExistentes.length > 10) {
+        rascunhosExistentes.splice(0, rascunhosExistentes.length - 10)
+      }
+      
+      localStorage.setItem('diarioObraRascunhos', JSON.stringify(rascunhosExistentes))
+      
+      alert('Rascunho salvo com sucesso!')
+    } catch (error) {
+      console.error('Erro ao salvar rascunho:', error)
+      alert('Erro ao salvar rascunho. Tente novamente.')
+    }
+  }
+
+  const carregarRascunho = () => {
+    try {
+      const rascunhosExistentes = JSON.parse(localStorage.getItem('diarioObraRascunhos') || '[]')
+      
+      if (rascunhosExistentes.length === 0) {
+        alert('Nenhum rascunho encontrado.')
+        return
+      }
+      
+      // Mostrar lista de rascunhos para seleção
+      const opcoes = rascunhosExistentes.map((rascunho, index) => 
+        `${index + 1}. ${rascunho.nomeRascunho} (${new Date(rascunho.dataRascunho).toLocaleString('pt-BR')})`
+      ).join('\n')
+      
+      const selecao = prompt(`Selecione um rascunho para carregar:\n\n${opcoes}\n\nDigite o número do rascunho:`)
+      
+      if (selecao && !isNaN(selecao)) {
+        const indice = parseInt(selecao) - 1
+        if (indice >= 0 && indice < rascunhosExistentes.length) {
+          const rascunhoSelecionado = rascunhosExistentes[indice]
+          
+          // Remover campos específicos do rascunho antes de carregar
+          const { dataRascunho, nomeRascunho, ...dadosParaCarregar } = rascunhoSelecionado
+          
+          setFormData(dadosParaCarregar)
+          alert('Rascunho carregado com sucesso!')
+        } else {
+          alert('Seleção inválida.')
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar rascunho:', error)
+      alert('Erro ao carregar rascunho. Tente novamente.')
+    }
+  }
+
+  const limparRascunhos = () => {
+    if (confirm('Tem certeza que deseja excluir todos os rascunhos salvos?')) {
+      localStorage.removeItem('diarioObraRascunhos')
+      alert('Todos os rascunhos foram excluídos.')
+    }
+  }
+
+  const exportarRascunhos = () => {
+    try {
+      const rascunhos = JSON.parse(localStorage.getItem('diarioObraRascunhos') || '[]')
+      if (rascunhos.length === 0) {
+        alert('Nenhum rascunho para exportar.')
+        return
+      }
+      
+      const dataStr = JSON.stringify(rascunhos, null, 2)
+      const dataBlob = new Blob([dataStr], { type: 'application/json' })
+      const url = URL.createObjectURL(dataBlob)
+      
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `rascunhos_diario_obra_${new Date().toISOString().split('T')[0]}.json`
+      link.click()
+      
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Erro ao exportar rascunhos:', error)
+      alert('Erro ao exportar rascunhos.')
+    }
+  }
+
   // Função para converter arquivo para base64
   const fileToBase64 = (file) => {
     return new Promise((resolve, reject) => {
@@ -286,96 +383,194 @@ function App() {
       if (yPosition + requiredHeight > pageHeight - 20) {
         pdf.addPage()
         yPosition = 20
+        return true
       }
+      return false
     }
 
-    // Cabeçalho com logo
+    // Função para adicionar linha decorativa
+    const addDecorativeLine = (y, color = [184, 211, 50]) => {
+      pdf.setDrawColor(...color)
+      pdf.setLineWidth(2)
+      pdf.line(20, y, pageWidth - 20, y)
+    }
+
+    // Função para adicionar seção com estilo
+    const addSectionHeader = (title, icon = '') => {
+      checkNewPage(25)
+      
+      // Fundo da seção
+      pdf.setFillColor(248, 253, 240) // Verde muito claro
+      pdf.rect(15, yPosition - 5, pageWidth - 30, 20, 'F')
+      
+      // Borda da seção
+      pdf.setDrawColor(184, 211, 50)
+      pdf.setLineWidth(1)
+      pdf.rect(15, yPosition - 5, pageWidth - 30, 20)
+      
+      pdf.setFontSize(14)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setTextColor(74, 93, 35) // Verde escuro
+      pdf.text(`${icon} ${title}`, 20, yPosition + 8)
+      
+      yPosition += 25
+      pdf.setTextColor(0, 0, 0) // Voltar para preto
+    }
+
+    // Cabeçalho moderno com gradiente visual
     try {
       const logoResponse = await fetch(logoIpex)
       const logoBlob = await logoResponse.blob()
       const logoBase64 = await fileToBase64(logoBlob)
-      pdf.addImage(logoBase64, 'PNG', 20, yPosition, 40, 15)
+      
+      // Fundo do cabeçalho
+      pdf.setFillColor(184, 211, 50)
+      pdf.rect(0, 0, pageWidth, 50, 'F')
+      
+      // Logo
+      pdf.addImage(logoBase64, 'PNG', 20, yPosition, 50, 20)
+      
+      // Título principal
+      pdf.setFontSize(24)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setTextColor(26, 26, 26)
+      pdf.text('DIÁRIO DE OBRA DIGITAL', pageWidth / 2, yPosition + 12, { align: 'center' })
+      
+      pdf.setFontSize(12)
+      pdf.setFont('helvetica', 'normal')
+      pdf.text('IPEX Construtora - Sistema de Controle de Obras', pageWidth / 2, yPosition + 22, { align: 'center' })
+      
+      // Data e hora de geração
+      pdf.setFontSize(8)
+      pdf.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth - 20, yPosition + 35, { align: 'right' })
+      
     } catch (error) {
       console.log('Erro ao carregar logo:', error)
     }
-
-    // Título
-    pdf.setFontSize(20)
-    pdf.setFont('helvetica', 'bold')
-    pdf.text('DIÁRIO DE OBRA DIGITAL', pageWidth / 2, yPosition + 10, { align: 'center' })
     
-    pdf.setFontSize(14)
-    pdf.setFont('helvetica', 'normal')
-    pdf.text('IPEX Construtora', pageWidth / 2, yPosition + 20, { align: 'center' })
-    
-    yPosition += 35
+    yPosition = 60
+    pdf.setTextColor(0, 0, 0)
 
     // Dados da obra
     const obraSelecionada = getObraSelecionada()
     if (obraSelecionada) {
-      checkNewPage(30)
-      pdf.setFontSize(14)
-      pdf.setFont('helvetica', 'bold')
-      pdf.text('DADOS DA OBRA', 20, yPosition)
-      yPosition += 10
+      addSectionHeader('DADOS DA OBRA', '🏗️')
       
-      pdf.setFontSize(10)
+      // Caixa de informações da obra
+      pdf.setFillColor(255, 255, 255)
+      pdf.setDrawColor(184, 211, 50)
+      pdf.setLineWidth(0.5)
+      pdf.rect(20, yPosition, pageWidth - 40, 35, 'FD')
+      
+      pdf.setFontSize(11)
+      pdf.setFont('helvetica', 'bold')
+      pdf.text('Obra:', 25, yPosition + 8)
       pdf.setFont('helvetica', 'normal')
-      pdf.text(`Obra: ${obraSelecionada.nome}`, 20, yPosition)
-      yPosition += 5
-      pdf.text(`Endereço: ${obraSelecionada.endereco}`, 20, yPosition)
-      yPosition += 5
-      pdf.text(`RDO Nº: ${formData.numeroRDO}`, 20, yPosition)
-      yPosition += 5
-      pdf.text(`Data: ${new Date(formData.dataRelatorio).toLocaleDateString('pt-BR')}`, 20, yPosition)
-      yPosition += 5
-      pdf.text(`Responsável: ${formData.responsavelRDO}`, 20, yPosition)
-      yPosition += 15
+      pdf.text(obraSelecionada.nome, 50, yPosition + 8)
+      
+      pdf.setFont('helvetica', 'bold')
+      pdf.text('Endereço:', 25, yPosition + 15)
+      pdf.setFont('helvetica', 'normal')
+      const endereco = pdf.splitTextToSize(obraSelecionada.endereco, pageWidth - 80)
+      pdf.text(endereco, 65, yPosition + 15)
+      
+      pdf.setFont('helvetica', 'bold')
+      pdf.text('RDO Nº:', 25, yPosition + 22)
+      pdf.setFont('helvetica', 'normal')
+      pdf.text(formData.numeroRDO, 60, yPosition + 22)
+      
+      pdf.setFont('helvetica', 'bold')
+      pdf.text('Data:', 120, yPosition + 22)
+      pdf.setFont('helvetica', 'normal')
+      pdf.text(new Date(formData.dataRelatorio).toLocaleDateString('pt-BR'), 140, yPosition + 22)
+      
+      pdf.setFont('helvetica', 'bold')
+      pdf.text('Responsável:', 25, yPosition + 29)
+      pdf.setFont('helvetica', 'normal')
+      pdf.text(formData.responsavelRDO || 'Não informado', 75, yPosition + 29)
+      
+      yPosition += 45
     }
 
     // Horário de trabalho
     if (formData.horaInicio || formData.horaFim) {
-      checkNewPage(25)
-      pdf.setFontSize(14)
-      pdf.setFont('helvetica', 'bold')
-      pdf.text('HORÁRIO DE TRABALHO', 20, yPosition)
-      yPosition += 10
+      addSectionHeader('HORÁRIO DE TRABALHO', '⏰')
+      
+      // Caixa de horários
+      pdf.setFillColor(250, 255, 245)
+      pdf.setDrawColor(184, 211, 50)
+      pdf.rect(20, yPosition, pageWidth - 40, 25, 'FD')
       
       pdf.setFontSize(10)
+      pdf.setFont('helvetica', 'bold')
+      pdf.text('Início:', 25, yPosition + 8)
       pdf.setFont('helvetica', 'normal')
-      pdf.text(`Início: ${formData.horaInicio || 'N/A'} | Fim: ${formData.horaFim || 'N/A'}`, 20, yPosition)
-      yPosition += 5
+      pdf.text(formData.horaInicio || 'N/A', 50, yPosition + 8)
+      
+      pdf.setFont('helvetica', 'bold')
+      pdf.text('Fim:', 100, yPosition + 8)
+      pdf.setFont('helvetica', 'normal')
+      pdf.text(formData.horaFim || 'N/A', 120, yPosition + 8)
+      
       if (formData.horaInicioIntervalo || formData.horaFimIntervalo) {
-        pdf.text(`Intervalo: ${formData.horaInicioIntervalo || 'N/A'} às ${formData.horaFimIntervalo || 'N/A'}`, 20, yPosition)
-        yPosition += 5
+        pdf.setFont('helvetica', 'bold')
+        pdf.text('Intervalo:', 25, yPosition + 15)
+        pdf.setFont('helvetica', 'normal')
+        pdf.text(`${formData.horaInicioIntervalo || 'N/A'} às ${formData.horaFimIntervalo || 'N/A'}`, 65, yPosition + 15)
       }
-      pdf.text(`Total trabalhado: ${calcularHorasTrabalhadas()}`, 20, yPosition)
-      yPosition += 15
+      
+      pdf.setFont('helvetica', 'bold')
+      pdf.text('Total trabalhado:', 25, yPosition + 22)
+      pdf.setFont('helvetica', 'normal')
+      pdf.text(calcularHorasTrabalhadas(), 85, yPosition + 22)
+      
+      yPosition += 35
     }
 
-    // Condições climáticas
+    // Condições climáticas com layout visual melhorado
     if (formData.climaManha || formData.climaTarde || formData.climaNoite) {
-      checkNewPage(25)
-      pdf.setFontSize(14)
-      pdf.setFont('helvetica', 'bold')
-      pdf.text('CONDIÇÕES CLIMÁTICAS', 20, yPosition)
-      yPosition += 10
+      addSectionHeader('CONDIÇÕES CLIMÁTICAS', '🌤️')
       
-      pdf.setFontSize(10)
-      pdf.setFont('helvetica', 'normal')
-      if (formData.climaManha) {
-        pdf.text(`Manhã: ${formData.climaManha} ${formData.praticavelManha ? '(Praticável)' : '(Não praticável)'}`, 20, yPosition)
-        yPosition += 5
-      }
-      if (formData.climaTarde) {
-        pdf.text(`Tarde: ${formData.climaTarde} ${formData.praticavelTarde ? '(Praticável)' : '(Não praticável)'}`, 20, yPosition)
-        yPosition += 5
-      }
-      if (formData.climaNoite) {
-        pdf.text(`Noite: ${formData.climaNoite} ${formData.praticavelNoite ? '(Praticável)' : '(Não praticável)'}`, 20, yPosition)
-        yPosition += 5
-      }
-      yPosition += 10
+      const periodos = [
+        { nome: 'Manhã', clima: formData.climaManha, praticavel: formData.praticavelManha },
+        { nome: 'Tarde', clima: formData.climaTarde, praticavel: formData.praticavelTarde },
+        { nome: 'Noite', clima: formData.climaNoite, praticavel: formData.praticavelNoite }
+      ]
+      
+      const boxWidth = (pageWidth - 60) / 3
+      let xPos = 20
+      
+      periodos.forEach((periodo, index) => {
+        if (periodo.clima) {
+          // Caixa para cada período
+          const corFundo = periodo.praticavel ? [240, 255, 240] : [255, 240, 240]
+          pdf.setFillColor(...corFundo)
+          pdf.setDrawColor(184, 211, 50)
+          pdf.rect(xPos, yPosition, boxWidth, 30, 'FD')
+          
+          // Título do período
+          pdf.setFontSize(10)
+          pdf.setFont('helvetica', 'bold')
+          pdf.text(periodo.nome, xPos + boxWidth/2, yPosition + 8, { align: 'center' })
+          
+          // Condição climática
+          pdf.setFont('helvetica', 'normal')
+          pdf.text(periodo.clima, xPos + boxWidth/2, yPosition + 15, { align: 'center' })
+          
+          // Status de praticabilidade
+          pdf.setFontSize(8)
+          pdf.setFont('helvetica', 'bold')
+          const status = periodo.praticavel ? 'PRATICÁVEL' : 'NÃO PRATICÁVEL'
+          const corTexto = periodo.praticavel ? [0, 128, 0] : [128, 0, 0]
+          pdf.setTextColor(...corTexto)
+          pdf.text(status, xPos + boxWidth/2, yPosition + 22, { align: 'center' })
+          pdf.setTextColor(0, 0, 0)
+          
+          xPos += boxWidth + 10
+        }
+      })
+      
+      yPosition += 40
     }
 
     // Empreiteiras
@@ -441,86 +636,189 @@ function App() {
       yPosition += 10
     }
 
-    // Atividades executadas
+    // Atividades executadas com layout moderno
     if (formData.atividades.length > 0) {
-      for (const atividade of formData.atividades) {
-        checkNewPage(40)
-        pdf.setFontSize(14)
-        pdf.setFont('helvetica', 'bold')
-        pdf.text('ATIVIDADE EXECUTADA', 20, yPosition)
-        yPosition += 10
+      addSectionHeader('ATIVIDADES EXECUTADAS', '📋')
+      
+      for (const [index, atividade] of formData.atividades.entries()) {
+        checkNewPage(80)
         
-        pdf.setFontSize(10)
-        pdf.setFont('helvetica', 'normal')
-        pdf.text(`Descrição: ${atividade.descricao}`, 20, yPosition)
-        yPosition += 5
-        if (atividade.local) {
-          pdf.text(`Local: ${atividade.local}`, 20, yPosition)
-          yPosition += 5
+        // Cabeçalho da atividade
+        pdf.setFillColor(245, 250, 255)
+        pdf.setDrawColor(184, 211, 50)
+        pdf.rect(20, yPosition, pageWidth - 40, 15, 'FD')
+        
+        pdf.setFontSize(12)
+        pdf.setFont('helvetica', 'bold')
+        pdf.text(`Atividade ${index + 1}`, 25, yPosition + 10)
+        
+        // Status badge
+        const statusColors = {
+          'Concluída': [212, 237, 218],
+          'Em andamento': [255, 243, 205],
+          'Paralisada': [248, 215, 218]
         }
-        pdf.text(`Status: ${atividade.status}`, 20, yPosition)
-        yPosition += 5
+        const statusColor = statusColors[atividade.status] || [240, 240, 240]
+        pdf.setFillColor(...statusColor)
+        pdf.rect(pageWidth - 80, yPosition + 2, 50, 11, 'F')
+        pdf.setFontSize(8)
+        pdf.text(atividade.status, pageWidth - 55, yPosition + 9, { align: 'center' })
+        
+        yPosition += 20
+        
+        // Conteúdo da atividade em duas colunas
+        const colWidth = (pageWidth - 60) / 2
+        
+        // Coluna esquerda - Informações
+        pdf.setFontSize(10)
+        pdf.setFont('helvetica', 'bold')
+        pdf.text('Descrição:', 25, yPosition)
+        pdf.setFont('helvetica', 'normal')
+        const descricao = pdf.splitTextToSize(atividade.descricao, colWidth - 10)
+        pdf.text(descricao, 25, yPosition + 7)
+        
+        let leftColY = yPosition + 7 + (descricao.length * 5)
+        
+        if (atividade.local) {
+          pdf.setFont('helvetica', 'bold')
+          pdf.text('Local:', 25, leftColY + 5)
+          pdf.setFont('helvetica', 'normal')
+          pdf.text(atividade.local, 25, leftColY + 12)
+          leftColY += 17
+        }
         
         if (atividade.executores && atividade.executores.length > 0) {
-          pdf.text('Executores:', 20, yPosition)
-          yPosition += 5
+          pdf.setFont('helvetica', 'bold')
+          pdf.text('Executores:', 25, leftColY + 5)
+          leftColY += 10
+          
           atividade.executores.forEach((executor) => {
             const nomeExecutor = executor.tipo === 'empreiteira' ? executor.nome : `${executor.nomeCompleto} (${executor.funcaoDisplay})`
-            pdf.text(`• ${nomeExecutor}`, 25, yPosition)
-            yPosition += 5
+            pdf.setFont('helvetica', 'normal')
+            pdf.text(`• ${nomeExecutor}`, 30, leftColY)
+            leftColY += 5
           })
         }
         
         if (atividade.observacoes) {
-          pdf.text(`Observações: ${atividade.observacoes}`, 20, yPosition)
-          yPosition += 5
+          pdf.setFont('helvetica', 'bold')
+          pdf.text('Observações:', 25, leftColY + 5)
+          pdf.setFont('helvetica', 'normal')
+          const obs = pdf.splitTextToSize(atividade.observacoes, colWidth - 10)
+          pdf.text(obs, 25, leftColY + 12)
+          leftColY += 12 + (obs.length * 5)
         }
         
-        // Adicionar foto se existir
+        // Coluna direita - Foto
         if (atividade.foto) {
           try {
-            checkNewPage(60)
             const fotoBase64 = await fileToBase64(atividade.foto)
-            pdf.addImage(fotoBase64, 'JPEG', 20, yPosition, 80, 60)
-            yPosition += 65
+            const fotoX = 25 + colWidth + 10
+            const fotoY = yPosition
+            const fotoWidth = colWidth - 20
+            const fotoHeight = 60
+            
+            // Moldura da foto
+            pdf.setDrawColor(184, 211, 50)
+            pdf.setLineWidth(1)
+            pdf.rect(fotoX - 2, fotoY - 2, fotoWidth + 4, fotoHeight + 4)
+            
+            pdf.addImage(fotoBase64, 'JPEG', fotoX, fotoY, fotoWidth, fotoHeight)
+            
+            // Legenda da foto
+            pdf.setFontSize(8)
+            pdf.setFont('helvetica', 'italic')
+            pdf.text('Foto da atividade executada', fotoX + fotoWidth/2, fotoY + fotoHeight + 8, { align: 'center' })
+            
           } catch (error) {
             console.log('Erro ao adicionar foto da atividade:', error)
           }
         }
         
-        yPosition += 10
+        yPosition = Math.max(leftColY, yPosition + 70) + 15
+        
+        // Linha separadora
+        if (index < formData.atividades.length - 1) {
+          addDecorativeLine(yPosition)
+          yPosition += 10
+        }
       }
     }
 
-    // Ocorrências
+    // Ocorrências com layout moderno
     if (formData.ocorrencias.length > 0) {
-      for (const ocorrencia of formData.ocorrencias) {
-        checkNewPage(40)
-        pdf.setFontSize(14)
+      addSectionHeader('OCORRÊNCIAS E OBSERVAÇÕES', '⚠️')
+      
+      for (const [index, ocorrencia] of formData.ocorrencias.entries()) {
+        checkNewPage(70)
+        
+        // Cabeçalho da ocorrência com cor baseada na prioridade
+        const prioridadeCores = {
+          'Alta': [255, 235, 235],
+          'Média': [255, 248, 235],
+          'Baixa': [235, 255, 235]
+        }
+        const corFundo = prioridadeCores[ocorrencia.prioridade] || [245, 245, 245]
+        
+        pdf.setFillColor(...corFundo)
+        pdf.setDrawColor(184, 211, 50)
+        pdf.rect(20, yPosition, pageWidth - 40, 15, 'FD')
+        
+        pdf.setFontSize(12)
         pdf.setFont('helvetica', 'bold')
-        pdf.text('OCORRÊNCIA', 20, yPosition)
-        yPosition += 10
+        pdf.text(`Ocorrência ${index + 1}`, 25, yPosition + 10)
         
+        // Badge de prioridade
+        const prioridadeTexto = `${ocorrencia.tipo} - ${ocorrencia.prioridade}`
+        pdf.setFontSize(8)
+        pdf.text(prioridadeTexto, pageWidth - 20, yPosition + 10, { align: 'right' })
+        
+        yPosition += 20
+        
+        // Layout em duas colunas
+        const colWidth = (pageWidth - 60) / 2
+        
+        // Coluna esquerda - Descrição
         pdf.setFontSize(10)
+        pdf.setFont('helvetica', 'bold')
+        pdf.text('Descrição:', 25, yPosition)
         pdf.setFont('helvetica', 'normal')
-        pdf.text(`Tipo: ${ocorrencia.tipo} | Prioridade: ${ocorrencia.prioridade}`, 20, yPosition)
-        yPosition += 5
-        pdf.text(`Descrição: ${ocorrencia.descricao}`, 20, yPosition)
-        yPosition += 5
+        const descricao = pdf.splitTextToSize(ocorrencia.descricao, colWidth - 10)
+        pdf.text(descricao, 25, yPosition + 7)
         
-        // Adicionar foto se existir
+        // Coluna direita - Foto
         if (ocorrencia.foto) {
           try {
-            checkNewPage(60)
             const fotoBase64 = await fileToBase64(ocorrencia.foto)
-            pdf.addImage(fotoBase64, 'JPEG', 20, yPosition, 80, 60)
-            yPosition += 65
+            const fotoX = 25 + colWidth + 10
+            const fotoY = yPosition
+            const fotoWidth = colWidth - 20
+            const fotoHeight = 50
+            
+            // Moldura da foto
+            pdf.setDrawColor(255, 100, 100) // Vermelho para ocorrências
+            pdf.setLineWidth(1)
+            pdf.rect(fotoX - 2, fotoY - 2, fotoWidth + 4, fotoHeight + 4)
+            
+            pdf.addImage(fotoBase64, 'JPEG', fotoX, fotoY, fotoWidth, fotoHeight)
+            
+            // Legenda da foto
+            pdf.setFontSize(8)
+            pdf.setFont('helvetica', 'italic')
+            pdf.text('Registro fotográfico da ocorrência', fotoX + fotoWidth/2, fotoY + fotoHeight + 8, { align: 'center' })
+            
           } catch (error) {
             console.log('Erro ao adicionar foto da ocorrência:', error)
           }
         }
         
-        yPosition += 10
+        yPosition += Math.max(descricao.length * 5 + 15, 65)
+        
+        // Linha separadora
+        if (index < formData.ocorrencias.length - 1) {
+          addDecorativeLine(yPosition)
+          yPosition += 10
+        }
       }
     }
 
@@ -1596,17 +1894,79 @@ function App() {
           </CardContent>
         </Card>
 
+        {/* Controle de Rascunhos */}
+        <Card className="ipex-card smooth-transition">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 ipex-section-title">
+              <FileText className="h-5 w-5" />
+              Controle de Rascunhos
+            </CardTitle>
+            <CardDescription>
+              Salve seu progresso e carregue rascunhos anteriores
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              <Button 
+                onClick={salvarRascunho}
+                className="ipex-green btn-hover-lift smooth-transition"
+                variant="default"
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Salvar Rascunho
+              </Button>
+              
+              <Button 
+                onClick={carregarRascunho}
+                className="bg-blue-600 hover:bg-blue-700 btn-hover-lift smooth-transition"
+                variant="default"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Carregar Rascunho
+              </Button>
+              
+              <Button 
+                onClick={exportarRascunhos}
+                className="bg-purple-600 hover:bg-purple-700 btn-hover-lift smooth-transition"
+                variant="default"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Exportar Rascunhos
+              </Button>
+              
+              <Button 
+                onClick={limparRascunhos}
+                className="bg-red-600 hover:bg-red-700 btn-hover-lift smooth-transition"
+                variant="default"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Limpar Rascunhos
+              </Button>
+            </div>
+            
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>💡 Dica:</strong> Os rascunhos são salvos automaticamente no seu navegador. 
+                Você pode salvar até 10 rascunhos e exportá-los para backup.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Botão para gerar PDF */}
-        <Card>
+        <Card className="ipex-card smooth-transition">
           <CardContent className="pt-6">
             <Button 
               onClick={gerarPDF}
-              className="w-full bg-green-600 hover:bg-green-700" 
+              className="w-full ipex-green btn-hover-lift smooth-transition" 
               size="lg"
             >
               <Download className="h-5 w-5 mr-2" />
               Gerar PDF do Diário de Obra
             </Button>
+            <p className="text-sm text-gray-600 mt-2 text-center">
+              PDF com layout moderno, fotos integradas e branding IPEX
+            </p>
           </CardContent>
         </Card>
       </div>

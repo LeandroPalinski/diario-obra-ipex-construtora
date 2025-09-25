@@ -1,6 +1,6 @@
 # Diário de Obra Digital - IPEX Construtora
 
-Sistema completo para registro e controle de atividades diárias da obra desenvolvido para a IPEX Construtora.
+Sistema completo para registro e controle de atividades diárias da obra desenvolvido para a IPEX Construtora com **layout moderno de PDF** e **sistema de rascunhos**.
 
 ## 🏗️ Funcionalidades Principais
 
@@ -66,11 +66,25 @@ Sistema completo para registro e controle de atividades diárias da obra desenvo
 - **Design responsivo e moderno**
 - **Animações suaves e micro-interações**
 
-## 📄 Geração de PDF
-- **PDF completo com todas as seções**
-- **Integração de fotos anexadas**
-- **Layout profissional com branding IPEX**
+## 📄 Geração de PDF Moderna
+- **Layout completamente redesenhado e moderno**
+- **Cabeçalho com gradiente e branding IPEX**
+- **Condições climáticas em layout visual com caixas coloridas**
+- **Atividades e ocorrências em layout de duas colunas**
+- **Fotos integradas com molduras e legendas**
+- **Seções organizadas com fundos coloridos e bordas**
+- **Status badges coloridos para atividades**
+- **Prioridade visual para ocorrências**
 - **Nome automático do arquivo**: `Diario_Obra_RDO_[NUMERO]_[DATA].pdf`
+
+## 💾 Sistema de Rascunhos
+- **Salvar rascunho no navegador** (localStorage)
+- **Carregar rascunhos salvos** com seleção por lista
+- **Exportar rascunhos** para arquivo JSON
+- **Limpar todos os rascunhos** com confirmação
+- **Armazenamento de até 10 rascunhos** automaticamente
+- **Interface intuitiva** com botões coloridos
+- **Backup e restauração** de dados
 
 ## 🛠️ Tecnologias Utilizadas
 - **React 19.1.0**
