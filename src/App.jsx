@@ -515,7 +515,9 @@ function App() {
       pdf.setFont('helvetica', 'bold')
       pdf.text('Data:', 120, yPosition + 22)
       pdf.setFont('helvetica', 'normal')
-      pdf.text(new Date(formData.dataRelatorio).toLocaleDateString('pt-BR'), 140, yPosition + 22)
+      // Corrigir problema de fuso horário na data
+      const dataCorrigida = new Date(formData.dataRelatorio + 'T12:00:00')
+      pdf.text(dataCorrigida.toLocaleDateString('pt-BR'), 140, yPosition + 22)
       
       pdf.setFont('helvetica', 'bold')
       pdf.text('Responsável:', 25, yPosition + 29)
