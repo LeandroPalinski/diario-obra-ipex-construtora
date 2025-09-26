@@ -570,42 +570,37 @@ function App() {
         { nome: 'Noite', clima: formData.climaNoite, praticavel: formData.praticavelNoite }
       ]
       
-      // Filtrar apenas períodos com clima definido
-      const periodosComClima = periodos.filter(periodo => periodo.clima && periodo.clima.trim() !== '')
-      
-      if (periodosComClima.length > 0) {
-        const boxWidth = (pageWidth - 60) / Math.max(periodosComClima.length, 1)
-        let xPos = 20
+      // Garantir que todos os 3 períodos sejam exibidos
+      const boxWidth = (pageWidth - 60) / 3
+      let xPos = 20
         
-        periodosComClima.forEach((periodo, index) => {
-          // Caixa para cada período
-          const corFundo = periodo.praticavel ? [240, 255, 240] : [255, 240, 240]
-          pdf.setFillColor(...corFundo)
-          pdf.setDrawColor(184, 211, 50)
-          pdf.rect(xPos, yPosition, boxWidth - 5, 30, 'FD')
-          
-          // Título do período
-          pdf.setFontSize(10)
-          pdf.setFont('helvetica', 'bold')
-          pdf.text(periodo.nome, xPos + (boxWidth - 5)/2, yPosition + 8, { align: 'center' })
-          
-          // Condição climática
-          pdf.setFont('helvetica', 'normal')
-          pdf.text(periodo.clima, xPos + (boxWidth - 5)/2, yPosition + 15, { align: 'center' })
-          
-          // Status de praticabilidade
-          pdf.setFontSize(8)
-          pdf.setFont('helvetica', 'bold')
-          const status = periodo.praticavel ? 'PRATICAVEL' : 'NAO PRATICAVEL'
-          const corTexto = periodo.praticavel ? [0, 128, 0] : [128, 0, 0]
-          pdf.setTextColor(...corTexto)
-          pdf.text(status, xPos + (boxWidth - 5)/2, yPosition + 22, { align: 'center' })
-          pdf.setTextColor(0, 0, 0)
-          
-          xPos += boxWidth
-        })
-      }
-      
+      periodos.forEach((periodo) => {
+        // Caixa para cada período
+        const corFundo = periodo.praticavel ? [240, 255, 240] : [255, 240, 240]
+        pdf.setFillColor(...corFundo)
+        pdf.setDrawColor(184, 211, 50)
+        pdf.rect(xPos, yPosition, boxWidth - 5, 30, 'FD')
+        
+        // Título do período
+        pdf.setFontSize(10)
+        pdf.setFont('helvetica', 'bold')
+        pdf.text(periodo.nome, xPos + (boxWidth - 5)/2, yPosition + 8, { align: 'center' })
+        
+        // Condição climática (exibir mesmo se vazio)
+        pdf.setFont('helvetica', 'normal')
+        pdf.text(periodo.clima || 'N/A', xPos + (boxWidth - 5)/2, yPosition + 15, { align: 'center' })
+        
+        // Status de praticabilidade
+        pdf.setFontSize(8)
+        pdf.setFont('helvetica', 'bold')
+        const status = periodo.praticavel ? 'PRATICAVEL' : 'NAO PRATICAVEL'
+        const corTexto = periodo.praticavel ? [0, 128, 0] : [128, 0, 0]
+        pdf.setTextColor(...corTexto)
+        pdf.text(status, xPos + (boxWidth - 5)/2, yPosition + 22, { align: 'center' })
+        pdf.setTextColor(0, 0, 0)
+        
+        xPos += boxWidth
+      })
       yPosition += 40
     }
 
