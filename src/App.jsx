@@ -51,10 +51,10 @@ function App() {
     
     // Materiais
     materiais: [],
-    
     // Comentários
-    comentarios: ''
-  })
+    comentarios: '',
+    funcionariosFaltantes: '',
+  });
 
   // Estados para formulários temporários
   const [currentEmpreiteira, setCurrentEmpreiteira] = useState({ nome: '', numColaboradores: '', responsavel: '' })
@@ -842,6 +842,16 @@ function App() {
           yPosition += 10
         }
       }
+    }
+
+    // Funcionários Faltantes
+    if (formData.funcionariosFaltantes) {
+      addSectionHeader("FUNCIONARIOS FALTANTES")
+      pdf.setFontSize(10)
+      pdf.setFont("helvetica", "normal")
+      const faltantes = pdf.splitTextToSize(formData.funcionariosFaltantes, pageWidth - 40)
+      pdf.text(faltantes, 20, yPosition)
+      yPosition += faltantes.length * 5 + 10
     }
 
     // Materiais
@@ -1765,6 +1775,30 @@ function App() {
                   </div>
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Funcionários Faltantes */}
+        <Card className="ipex-card smooth-transition">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 ipex-section-title">
+              <UserX className="h-5 w-5" />
+              Funcionários Faltantes
+            </CardTitle>
+            <CardDescription>
+              Registre os funcionários que não compareceram ao trabalho.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <Label htmlFor="funcionariosFaltantes">Nomes dos Funcionários Faltantes</Label>
+              <Textarea 
+                id="funcionariosFaltantes" 
+                placeholder="Ex: João Silva (Motivo: Atestado), Maria Souza (Motivo: Falta Injustificada)"
+                value={formData.funcionariosFaltantes}
+                onChange={(e) => updateFormData("funcionariosFaltantes", e.target.value)}
+              />
             </div>
           </CardContent>
         </Card>
