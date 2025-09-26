@@ -411,7 +411,7 @@ function App() {
       pdf.setFontSize(14)
       pdf.setFont('helvetica', 'bold')
       pdf.setTextColor(74, 93, 35) // Verde escuro
-      pdf.text(`${icon} ${title}`, 20, yPosition + 8)
+      pdf.text(title, 20, yPosition + 8) // Removido o ícone para evitar caracteres especiais
       
       yPosition += 25
       pdf.setTextColor(0, 0, 0) // Voltar para preto
@@ -454,7 +454,7 @@ function App() {
     // Dados da obra
     const obraSelecionada = getObraSelecionada()
     if (obraSelecionada) {
-      addSectionHeader('DADOS DA OBRA', '🏗️')
+      addSectionHeader('DADOS DA OBRA')
       
       // Caixa de informações da obra
       pdf.setFillColor(255, 255, 255)
@@ -494,7 +494,7 @@ function App() {
 
     // Horário de trabalho
     if (formData.horaInicio || formData.horaFim) {
-      addSectionHeader('HORÁRIO DE TRABALHO', '⏰')
+      addSectionHeader('HORARIO DE TRABALHO')
       
       // Caixa de horários
       pdf.setFillColor(250, 255, 245)
@@ -529,7 +529,7 @@ function App() {
 
     // Condições climáticas com layout visual melhorado
     if (formData.climaManha || formData.climaTarde || formData.climaNoite) {
-      addSectionHeader('CONDIÇÕES CLIMÁTICAS', '🌤️')
+      addSectionHeader('CONDICOES CLIMATICAS')
       
       const periodos = [
         { nome: 'Manhã', clima: formData.climaManha, praticavel: formData.praticavelManha },
@@ -575,11 +575,10 @@ function App() {
 
     // Empreiteiras
     if (formData.empreiteiras.length > 0) {
-      checkNewPage(20 + formData.empreiteiras.length * 8)
-      pdf.setFontSize(14)
-      pdf.setFont('helvetica', 'bold')
-      pdf.text('EMPREITEIRAS', 20, yPosition)
-      yPosition += 10
+      addSectionHeader('EMPREITEIRAS')
+      
+      pdf.setFontSize(10)
+      pdf.setFont('helvetica', 'normal')
       
       pdf.setFontSize(10)
       pdf.setFont('helvetica', 'normal')
@@ -596,11 +595,7 @@ function App() {
 
     // Mão de obra
     if (formData.maoDeObra.length > 0) {
-      checkNewPage(20 + formData.maoDeObra.length * 8)
-      pdf.setFontSize(14)
-      pdf.setFont('helvetica', 'bold')
-      pdf.text('MÃO DE OBRA', 20, yPosition)
-      yPosition += 10
+      addSectionHeader('MAO DE OBRA')
       
       pdf.setFontSize(10)
       pdf.setFont('helvetica', 'normal')
@@ -617,11 +612,7 @@ function App() {
 
     // Equipamentos
     if (formData.equipamentos.length > 0) {
-      checkNewPage(20 + formData.equipamentos.length * 8)
-      pdf.setFontSize(14)
-      pdf.setFont('helvetica', 'bold')
-      pdf.text('EQUIPAMENTOS', 20, yPosition)
-      yPosition += 10
+      addSectionHeader('EQUIPAMENTOS')
       
       pdf.setFontSize(10)
       pdf.setFont('helvetica', 'normal')
@@ -638,7 +629,7 @@ function App() {
 
     // Atividades executadas com layout moderno
     if (formData.atividades.length > 0) {
-      addSectionHeader('ATIVIDADES EXECUTADAS', '📋')
+      addSectionHeader('ATIVIDADES EXECUTADAS')
       
       for (const [index, atividade] of formData.atividades.entries()) {
         checkNewPage(80)
@@ -747,7 +738,7 @@ function App() {
 
     // Ocorrências com layout moderno
     if (formData.ocorrencias.length > 0) {
-      addSectionHeader('OCORRÊNCIAS E OBSERVAÇÕES', '⚠️')
+      addSectionHeader('OCORRENCIAS E OBSERVACOES')
       
       for (const [index, ocorrencia] of formData.ocorrencias.entries()) {
         checkNewPage(70)
@@ -824,11 +815,7 @@ function App() {
 
     // Materiais
     if (formData.materiais.length > 0) {
-      checkNewPage(20 + formData.materiais.length * 8)
-      pdf.setFontSize(14)
-      pdf.setFont('helvetica', 'bold')
-      pdf.text('MATERIAIS', 20, yPosition)
-      yPosition += 10
+      addSectionHeader('MATERIAIS')
       
       pdf.setFontSize(10)
       pdf.setFont('helvetica', 'normal')
@@ -845,11 +832,7 @@ function App() {
 
     // Comentários gerais
     if (formData.comentarios) {
-      checkNewPage(30)
-      pdf.setFontSize(14)
-      pdf.setFont('helvetica', 'bold')
-      pdf.text('COMENTÁRIOS GERAIS', 20, yPosition)
-      yPosition += 10
+      addSectionHeader('COMENTARIOS GERAIS')
       
       pdf.setFontSize(10)
       pdf.setFont('helvetica', 'normal')
