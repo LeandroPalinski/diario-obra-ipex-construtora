@@ -417,38 +417,71 @@ function App() {
       pdf.setTextColor(0, 0, 0) // Voltar para preto
     }
 
-    // Cabeçalho moderno com gradiente visual
+    // Cabeçalho moderno centralizado e organizado
     try {
       const logoResponse = await fetch(logoIpex)
       const logoBlob = await logoResponse.blob()
       const logoBase64 = await fileToBase64(logoBlob)
       
-      // Fundo do cabeçalho
+      // Fundo do cabeçalho com gradiente visual
       pdf.setFillColor(184, 211, 50)
-      pdf.rect(0, 0, pageWidth, 50, 'F')
+      pdf.rect(0, 0, pageWidth, 60, 'F')
       
-      // Logo
-      pdf.addImage(logoBase64, 'PNG', 20, yPosition, 50, 20)
+      // Borda inferior do cabeçalho
+      pdf.setDrawColor(74, 93, 35)
+      pdf.setLineWidth(2)
+      pdf.line(0, 60, pageWidth, 60)
       
-      // Título principal
-      pdf.setFontSize(24)
+      // Logo centralizado no lado esquerdo
+      const logoWidth = 45
+      const logoHeight = 18
+      const logoX = 15
+      const logoY = yPosition + 6
+      pdf.addImage(logoBase64, 'PNG', logoX, logoY, logoWidth, logoHeight)
+      
+      // Área de texto centralizada
+      const textStartX = logoX + logoWidth + 15
+      const textWidth = pageWidth - textStartX - 15
+      
+      // Título principal centralizado
+      pdf.setFontSize(22)
       pdf.setFont('helvetica', 'bold')
       pdf.setTextColor(26, 26, 26)
-      pdf.text('DIÁRIO DE OBRA DIGITAL', pageWidth / 2, yPosition + 12, { align: 'center' })
+      pdf.text('DIARIO DE OBRA DIGITAL', textStartX + textWidth/2, yPosition + 15, { align: 'center' })
       
-      pdf.setFontSize(12)
+      // Subtítulo
+      pdf.setFontSize(11)
       pdf.setFont('helvetica', 'normal')
-      pdf.text('IPEX Construtora - Sistema de Controle de Obras', pageWidth / 2, yPosition + 22, { align: 'center' })
+      pdf.setTextColor(40, 40, 40)
+      pdf.text('IPEX Construtora - Sistema de Controle de Obras', textStartX + textWidth/2, yPosition + 25, { align: 'center' })
       
-      // Data e hora de geração
+      // Data e hora de geração centralizada
       pdf.setFontSize(8)
-      pdf.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth - 20, yPosition + 35, { align: 'right' })
+      pdf.setTextColor(60, 60, 60)
+      pdf.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, textStartX + textWidth/2, yPosition + 35, { align: 'center' })
+      
+      // Linha decorativa
+      pdf.setDrawColor(255, 255, 255)
+      pdf.setLineWidth(1)
+      pdf.line(textStartX, yPosition + 40, textStartX + textWidth, yPosition + 40)
       
     } catch (error) {
       console.log('Erro ao carregar logo:', error)
+      // Cabeçalho sem logo em caso de erro
+      pdf.setFillColor(184, 211, 50)
+      pdf.rect(0, 0, pageWidth, 60, 'F')
+      
+      pdf.setFontSize(22)
+      pdf.setFont('helvetica', 'bold')
+      pdf.setTextColor(26, 26, 26)
+      pdf.text('DIARIO DE OBRA DIGITAL', pageWidth / 2, yPosition + 20, { align: 'center' })
+      
+      pdf.setFontSize(11)
+      pdf.setFont('helvetica', 'normal')
+      pdf.text('IPEX Construtora - Sistema de Controle de Obras', pageWidth / 2, yPosition + 30, { align: 'center' })
     }
     
-    yPosition = 60
+    yPosition = 70
     pdf.setTextColor(0, 0, 0)
 
     // Dados da obra
@@ -532,43 +565,46 @@ function App() {
       addSectionHeader('CONDICOES CLIMATICAS')
       
       const periodos = [
-        { nome: 'Manhã', clima: formData.climaManha, praticavel: formData.praticavelManha },
+        { nome: 'Manha', clima: formData.climaManha, praticavel: formData.praticavelManha },
         { nome: 'Tarde', clima: formData.climaTarde, praticavel: formData.praticavelTarde },
         { nome: 'Noite', clima: formData.climaNoite, praticavel: formData.praticavelNoite }
       ]
       
-      const boxWidth = (pageWidth - 60) / 3
-      let xPos = 20
+      // Filtrar apenas períodos com clima definido
+      const periodosComClima = periodos.filter(periodo => periodo.clima && periodo.clima.trim() !== '')
       
-      periodos.forEach((periodo, index) => {
-        if (periodo.clima) {
+      if (periodosComClima.length > 0) {
+        const boxWidth = (pageWidth - 60) / Math.max(periodosComClima.length, 1)
+        let xPos = 20
+        
+        periodosComClima.forEach((periodo, index) => {
           // Caixa para cada período
           const corFundo = periodo.praticavel ? [240, 255, 240] : [255, 240, 240]
           pdf.setFillColor(...corFundo)
           pdf.setDrawColor(184, 211, 50)
-          pdf.rect(xPos, yPosition, boxWidth, 30, 'FD')
+          pdf.rect(xPos, yPosition, boxWidth - 5, 30, 'FD')
           
           // Título do período
           pdf.setFontSize(10)
           pdf.setFont('helvetica', 'bold')
-          pdf.text(periodo.nome, xPos + boxWidth/2, yPosition + 8, { align: 'center' })
+          pdf.text(periodo.nome, xPos + (boxWidth - 5)/2, yPosition + 8, { align: 'center' })
           
           // Condição climática
           pdf.setFont('helvetica', 'normal')
-          pdf.text(periodo.clima, xPos + boxWidth/2, yPosition + 15, { align: 'center' })
+          pdf.text(periodo.clima, xPos + (boxWidth - 5)/2, yPosition + 15, { align: 'center' })
           
           // Status de praticabilidade
           pdf.setFontSize(8)
           pdf.setFont('helvetica', 'bold')
-          const status = periodo.praticavel ? 'PRATICÁVEL' : 'NÃO PRATICÁVEL'
+          const status = periodo.praticavel ? 'PRATICAVEL' : 'NAO PRATICAVEL'
           const corTexto = periodo.praticavel ? [0, 128, 0] : [128, 0, 0]
           pdf.setTextColor(...corTexto)
-          pdf.text(status, xPos + boxWidth/2, yPosition + 22, { align: 'center' })
+          pdf.text(status, xPos + (boxWidth - 5)/2, yPosition + 22, { align: 'center' })
           pdf.setTextColor(0, 0, 0)
           
-          xPos += boxWidth + 10
-        }
-      })
+          xPos += boxWidth
+        })
+      }
       
       yPosition += 40
     }
