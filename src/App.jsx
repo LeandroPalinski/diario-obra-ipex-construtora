@@ -563,11 +563,11 @@ function App() {
     }
 
     // Condições climáticas com layout visual melhorado
-    if (formData.climaManha || formData.climaTarde || formData.climaNoite) {
+    if (formData.climaManhã || formData.climaTarde || formData.climaNoite) {
       addSectionHeader('CONDICOES CLIMATICAS')
       
       const periodos = [
-        { nome: 'Manha', clima: formData.climaManha, praticavel: formData.praticavelManha },
+        { nome: 'Manha', clima: formData.climaManhã, praticavel: formData.praticavelManhã },
         { nome: 'Tarde', clima: formData.climaTarde, praticavel: formData.praticavelTarde },
         { nome: 'Noite', clima: formData.climaNoite, praticavel: formData.praticavelNoite }
       ]
