@@ -7,9 +7,10 @@ import { Textarea } from '@/components/ui/textarea.jsx'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select.jsx'
 import { Badge } from '@/components/ui/badge.jsx'
 import { Separator } from '@/components/ui/separator.jsx'
-import { Calendar, Clock, Cloud, Users, Wrench, FileText, Camera, Download, Plus, Trash2, Edit2, UserX } from 'lucide-react'
+import { Calendar, Clock, Cloud, Users, Wrench, FileText, Camera, Download, Plus, Trash2, Edit2, UserX, Database, CloudUpload, CloudDownload, History } from 'lucide-react'
 import jsPDF from 'jspdf'
 import logoIpex from './assets/logo.png'
+import { salvarDiarioSupabase, carregarDiariosSupabase, carregarDiarioSupabase, deletarDiarioSupabase, initializeDatabase } from './lib/supabase.js'
 import './App.css'
 
 function App() {
@@ -68,6 +69,11 @@ function App() {
   const [editingItem, setEditingItem] = useState(null)
   const [editingType, setEditingType] = useState(null)
 
+  // Estados para Supabase
+  const [diariosSupabase, setDiariosSupabase] = useState([])
+  const [carregandoSupabase, setCarregandoSupabase] = useState(false)
+  const [mostrarDiariosSupabase, setMostrarDiariosSupabase] = useState(false)
+
   // Obras pré-definidas
   const obrasPredefinidas = [
     { id: 'ny-lofts', nome: 'New York Lofts', endereco: 'Rua São Genaro 100, São Francisco, Camboriú - SC' },
@@ -83,6 +89,11 @@ function App() {
   const updateFormData = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
+
+  // Inicialização do Supabase
+  useEffect(() => {
+    initializeDatabase()
+  }, [])
 
   // Geração automática do número RDO baseado na data
   useEffect(() => {
@@ -334,6 +345,91 @@ function App() {
     if (confirm('Tem certeza que deseja excluir todos os rascunhos salvos?')) {
       localStorage.removeItem('diarioObraRascunhos')
       alert('Todos os rascunhos foram excluídos.')
+    }
+  }
+
+  // Funções do Supabase
+  const salvarDiarioNaBase = async () => {
+    if (!formData.obraSelecionada || !formData.responsavelRDO || !formData.dataRelatorio) {
+      alert('Por favor, preencha pelo menos a obra, responsável e data antes de salvar.')
+      return
+    }
+
+    setCarregandoSupabase(true)
+    try {
+      const resultado = await salvarDiarioSupabase(formData)
+      
+      if (resultado.success) {
+        alert('Diário salvo na base de dados com sucesso!')
+        await carregarDiariosBase() // Recarregar lista
+      } else {
+        alert(`Erro ao salvar: ${resultado.error}`)
+      }
+    } catch (error) {
+      console.error('Erro ao salvar diário:', error)
+      alert('Erro ao salvar diário. Verifique sua conexão.')
+    } finally {
+      setCarregandoSupabase(false)
+    }
+  }
+
+  const carregarDiariosBase = async () => {
+    setCarregandoSupabase(true)
+    try {
+      const resultado = await carregarDiariosSupabase()
+      
+      if (resultado.success) {
+        setDiariosSupabase(resultado.data)
+        setMostrarDiariosSupabase(true)
+      } else {
+        alert(`Erro ao carregar: ${resultado.error}`)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar diários:', error)
+      alert('Erro ao carregar diários. Verifique sua conexão.')
+    } finally {
+      setCarregandoSupabase(false)
+    }
+  }
+
+  const carregarDiarioDaBase = async (id) => {
+    setCarregandoSupabase(true)
+    try {
+      const resultado = await carregarDiarioSupabase(id)
+      
+      if (resultado.success) {
+        setFormData(resultado.data.dados_completos)
+        setMostrarDiariosSupabase(false)
+        alert('Diário carregado com sucesso!')
+      } else {
+        alert(`Erro ao carregar: ${resultado.error}`)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar diário:', error)
+      alert('Erro ao carregar diário. Verifique sua conexão.')
+    } finally {
+      setCarregandoSupabase(false)
+    }
+  }
+
+  const deletarDiarioDaBase = async (id) => {
+    if (!confirm('Tem certeza que deseja excluir este diário?')) return
+
+    setCarregandoSupabase(true)
+    try {
+      const resultado = await deletarDiarioSupabase(id)
+      
+      if (resultado.success) {
+        alert('Diário excluído com sucesso!')
+        await carregarDiariosBase() // Recarregar lista
+      } else {
+        alert(`Erro ao excluir: ${resultado.error}`)
+      }
+    } catch (error) {
+      console.error('Erro ao excluir diário:', error)
+      alert('Erro ao excluir diário. Verifique sua conexão.')
+    } finally {
+      setCarregandoSupabase(false)
     }
   }
 
@@ -1945,9 +2041,9 @@ function App() {
         </Card>
 
         {/* Controle de Rascunhos */}
-        <Card className="ipex-card smooth-transition">
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 ipex-section-title">
+            <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
               Controle de Rascunhos
             </CardTitle>
@@ -1998,6 +2094,99 @@ function App() {
               <p className="text-sm text-blue-800">
                 <strong>💡 Dica:</strong> Os rascunhos são salvos automaticamente no seu navegador. 
                 Você pode salvar até 10 rascunhos e exportá-los para backup.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Base de Dados Supabase */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Base de Dados
+            </CardTitle>
+            <CardDescription>
+              Salve e gerencie seus diários na base de dados online
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+              <Button 
+                onClick={salvarDiarioNaBase}
+                disabled={carregandoSupabase}
+                className="ipex-green btn-hover-lift smooth-transition"
+                variant="default"
+              >
+                <CloudUpload className="h-4 w-4 mr-2" />
+                {carregandoSupabase ? 'Salvando...' : 'Salvar na Base'}
+              </Button>
+              
+              <Button 
+                onClick={carregarDiariosBase}
+                disabled={carregandoSupabase}
+                className="bg-blue-600 hover:bg-blue-700 btn-hover-lift smooth-transition"
+                variant="default"
+              >
+                <CloudDownload className="h-4 w-4 mr-2" />
+                {carregandoSupabase ? 'Carregando...' : 'Ver Diários Salvos'}
+              </Button>
+              
+              <Button 
+                onClick={() => setMostrarDiariosSupabase(false)}
+                className="bg-gray-600 hover:bg-gray-700 btn-hover-lift smooth-transition"
+                variant="default"
+              >
+                <History className="h-4 w-4 mr-2" />
+                Ocultar Lista
+              </Button>
+            </div>
+            
+            {mostrarDiariosSupabase && (
+              <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                <h4 className="font-semibold mb-3 text-gray-800">Diários Salvos na Base</h4>
+                {diariosSupabase.length === 0 ? (
+                  <p className="text-gray-600">Nenhum diário encontrado na base de dados.</p>
+                ) : (
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {diariosSupabase.map((diario) => (
+                      <div key={diario.id} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-800">RDO: {diario.numero_rdo}</p>
+                          <p className="text-sm text-gray-600">{diario.obra_selecionada}</p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(diario.created_at).toLocaleString('pt-BR')}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button 
+                            onClick={() => carregarDiarioDaBase(diario.id)}
+                            disabled={carregandoSupabase}
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <Download className="h-3 w-3" />
+                          </Button>
+                          <Button 
+                            onClick={() => deletarDiarioDaBase(diario.id)}
+                            disabled={carregandoSupabase}
+                            size="sm"
+                            variant="destructive"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-800">
+                <strong>🔒 Seguro:</strong> Seus diários são salvos com segurança na base de dados online. 
+                Acesse de qualquer dispositivo e mantenha seus dados sempre seguros.
               </p>
             </div>
           </CardContent>
